@@ -611,70 +611,6 @@ class GPR(object):
         
     def generate_id(self):
         self.the_id = get_an_id()
-        
-    def load_model(self):
-        """Load the model from input model_json using load_resource, or, secondarily,
-           from model_name.
-
-        """
-        model_json = self.model_json
-        if model_json is not None:
-            self.loaded_model_json = load_resource(self.model_json,
-                                                   'model_json',
-                                                   safe=self.safe)
-        elif self.model_name is not None:
-            # get the name
-            model_name = self.model_name  
-            model_name = model_name.replace(".json", "")
-            # if the file is not present attempt to download
-            cache_dir = get_cache_dir(name='models')
-            model_filename = join(cache_dir, model_name + ".json")
-            if not isfile(model_filename):
-                model_not_cached = 'Model "%s" not in cache. Attempting download from %s' % \
-                    (model_name, urls.escher_home)
-                warn(model_not_cached)
-                try:
-                    url = urls.model_download + model_name + ".json"
-                    download = urlopen(url)
-                    with open(model_filename, "w") as outfile:
-                        outfile.write(download.read())
-                except HTTPError:
-                    raise ValueError("No model named %s found in cache or at %s" % \
-                                     (model_name, url))
-            with open(model_filename) as f:
-                self.loaded_model_json = f.read()
-    
-    def load_map(self):
-        """Load the map from input map_json using load_resource, or, secondarily,
-           from map_name.
-
-        """
-        map_json = self.map_json
-        if map_json is not None:
-            self.loaded_map_json = load_resource(self.map_json,
-                                                 'map_json',
-                                                 safe=self.safe)
-        elif self.map_name is not None:
-            # get the name
-            map_name = self.map_name  
-            map_name = map_name.replace(".json", "")
-            # if the file is not present attempt to download
-            cache_dir = get_cache_dir(name='maps')
-            map_filename = join(cache_dir, map_name + ".json")
-            if not isfile(map_filename):
-                map_not_cached = 'Map "%s" not in cache. Attempting download from %s' % \
-                    (map_name, urls.escher_home)
-                warn(map_not_cached)
-                try:
-                    url = urls.map_download + map_name + ".json"
-                    download = urlopen(url)
-                    with open(map_filename, "w") as outfile:
-                        outfile.write(download.read())
-                except HTTPError:
-                    raise ValueError("No map named %s found in cache or at %s" % \
-                                     (map_name, url))
-            with open(map_filename) as f:
-                self.loaded_map_json = f.read()
 
     def _embedded_css(self, is_local):
         """Return a css string to be embedded in the SVG.
@@ -691,43 +627,17 @@ class GPR(object):
         return unicode(download.read().replace('\n', ' '))
     
     def _initialize_javascript(self, is_local):
-        javascript = (u"var map_data_{the_id} = {map_data};"
-                      u"var cobra_model_{the_id} = {cobra_model};"
-                      u"var reaction_data_{the_id} = {reaction_data};"
-                      u"var metabolite_data_{the_id} = {metabolite_data};"
-                      u"var css_string_{the_id} = '{style}';").format(
-                          the_id=self.the_id,
-                          map_data=(self.loaded_map_json if self.loaded_map_json else
-                                    u'null'),
-                          cobra_model=(self.loaded_model_json if self.loaded_model_json else
-                                       u'null'),
-                          reaction_data=(json.dumps(self.reaction_data) if self.reaction_data else
-                                         u'null'),
-                          metabolite_data=(json.dumps(self.metabolite_data) if self.metabolite_data else
-                                           u'null'),
-                          style=self._embedded_css(is_local))
+        javascript = u"var css_string_{the_id} = '{style}';".format(
+            the_id=self.the_id,
+            style=self._embedded_css(is_local))
         return javascript
 
     def _draw_js(self, the_id, dev):
         draw = (u"GPR({{ selection: d3.select('#{the_id}'),"
-                u"enable_editing: {enable_editing},"
-                u"menu: {menu},"
-                u"enable_keys: {enable_keys},"
-                u"scroll_behavior: {scroll_behavior},"
-                u"fill_screen: {fill_screen},"
-                u"map: map_data_{the_id},"
-                u"cobra_model: cobra_model_{the_id},"
-                u"auto_set_data_domain: {auto_set_data_domain},"
-                u"reaction_data: reaction_data_{the_id},"
-		u"metabolite_data: metabolite_data_{the_id},"
+                u"gene_reaction_rule: {gene_reaction_rule},"
                 u"css: css_string_{the_id},").format(
                     the_id=the_id,
-                    enable_editing=json.dumps(enable_editing),
-                    menu=json.dumps(menu),
-                    enable_keys=json.dumps(enable_keys),
-                    scroll_behavior=json.dumps(scroll_behavior),
-                    fill_screen=json.dumps(fill_screen),
-                    auto_set_data_domain=json.dumps(auto_set_data_domain))
+                    gene_reaction_rule=self.gene_reaction_rule)
         # Add the specified options
         for option in self.options:
             val = getattr(self, option)

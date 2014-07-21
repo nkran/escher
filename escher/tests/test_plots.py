@@ -1,5 +1,5 @@
 import escher.server
-from escher import (Builder, get_cache_dir, clear_cache, list_cached_maps,
+from escher import (Builder, GPR, get_cache_dir, clear_cache, list_cached_maps,
                     list_cached_models)
 from escher.plots import load_resource
 
@@ -92,3 +92,6 @@ def test_Builder(tmpdir):
 
     assert type(b.the_id) is unicode
     assert len(b.the_id) == 10
+
+def test_GPR():
+    gpr = GPR('gapA')
