@@ -94,6 +94,44 @@ def load_resource(resource, name, safe=False):
         return resource
     raise Exception('Could not load %s.' % name)
 
+def get_getter_setter(o):
+    """Use a closure."""
+    # create local fget and fset functions 
+    fget = lambda self: getattr(self, '_%s' % o)
+    fset = lambda self, value: setattr(self, '_%s' % o, value)
+    return fget, fset
+
+def save_html_to_file(html, filepath):
+    if filepath is not None:
+        with codecs.open(filepath, 'w', encoding='utf-8') as f:
+            f.write(html)
+        return filepath
+    else:
+        from tempfile import mkstemp
+        from os import write, close
+        os_file, filename = mkstemp(suffix=".html")
+        write(os_file, unicode(html).encode('utf-8'))
+        close(os_file)
+        return filename
+
+def check_js_source(js_source, embedded_css):
+    if js_source not in ['web', 'local', 'dev']:
+        raise Exception('Bad value for js_source: %s' % js_source)
+    
+    if js_source in ['local', 'dev'] and embedded_css is None:
+        raise Exception(("js_source values 'dev' and 'local' require "
+                         "Builder.embedded_css to be defined."))
+    
+def parse_height(height):
+    """if height is not a string"""
+    if type(height) is int:
+        return u"%dpx" % height
+    elif type(height) is float:
+        return u"%fpx" % height
+    elif type(height) is str:
+        return unicode(height)
+    return height
+
 class Builder(object):
     """Viewable metabolic map.
     
@@ -171,12 +209,6 @@ class Builder(object):
                         'metabolite_domain',
                         'metabolite_color_range',
                         'metabolite_size_range']
-        def get_getter_setter(o):
-            """Use a closure."""
-            # create local fget and fset functions 
-            fget = lambda self: getattr(self, '_%s' % o)
-            fset = lambda self, value: setattr(self, '_%s' % o, value)
-            return fget, fset
         for option in self.options:
             fget, fset = get_getter_setter(option)
             # make the setter
@@ -359,13 +391,8 @@ class Builder(object):
         domains as new data is applied.
 
         """
-
-        if js_source not in ['web', 'local', 'dev']:
-            raise Exception('Bad value for js_source: %s' % js_source)
-
-        if js_source in ['local', 'dev'] and self.embedded_css is None:
-            raise Exception(("js_source values 'dev' and 'local' require "
-                             "Builder.embedded_css to be defined."))
+        
+        check_js_source(js_source, self.embedded_css)
         
         if menu not in ['none', 'zoom', 'all']:
             raise Exception('Bad value for menu: %s' % menu)
@@ -375,13 +402,7 @@ class Builder(object):
         
         content = env.get_template('content.html')
 
-        # if height is not a string
-        if type(height) is int:
-            height = u"%dpx" % height
-        elif type(height) is float:
-            height = u"%fpx" % height
-        elif type(height) is str:
-            height = unicode(height)
+        height = parse_height(height)
             
         # set the proper urls 
         is_local = js_source=='local' or js_source=='dev'
@@ -553,15 +574,289 @@ class Builder(object):
                               html_wrapper=True, enable_editing=enable_editing, enable_keys=enable_keys,
                               minified_js=minified_js, fill_screen=True, height="100%",
                               auto_set_data_domain=auto_set_data_domain)
-        if filepath is not None:
-            with codecs.open(filepath, 'w', encoding='utf-8') as f:
-                f.write(html)
-            return filepath
-        else:
-            from tempfile import mkstemp
-            from os import write, close
-            os_file, filename = mkstemp(suffix=".html")
-            write(os_file, unicode(html).encode('utf-8'))
-            close(os_file)
-            return filename
+
+        save_html_to_file(html, filepath)
     
+class GPR(object):
+    """GPR visualization
+    
+    Arguments
+    ---------
+
+    gene_reaction_rule:
+    
+    safe: if True, then loading files from the filesytem is not allowed. This is
+    to ensure the safety of using Builder with a web server.
+
+    """
+    def __init__(self, gene_reaction_rule, safe=False):
+        self.safe = safe
+
+        # params
+        self.gene_reaction_rule = gene_reaction_rule
+
+        # make the unique id
+        self.generate_id()
+        
+        # set up the options
+        self.options = []
+        for option in self.options:
+            fget, fset = get_getter_setter(option)
+            # make the setter
+            setattr(self.__class__, 'set_%s' % option, fset)
+            # add property to self
+            setattr(self.__class__, option, property(fget))
+            # add corresponding local variable
+            setattr(self, '_%s' % option, None)
+        
+    def generate_id(self):
+        self.the_id = get_an_id()
+        
+    def load_model(self):
+        """Load the model from input model_json using load_resource, or, secondarily,
+           from model_name.
+
+        """
+        model_json = self.model_json
+        if model_json is not None:
+            self.loaded_model_json = load_resource(self.model_json,
+                                                   'model_json',
+                                                   safe=self.safe)
+        elif self.model_name is not None:
+            # get the name
+            model_name = self.model_name  
+            model_name = model_name.replace(".json", "")
+            # if the file is not present attempt to download
+            cache_dir = get_cache_dir(name='models')
+            model_filename = join(cache_dir, model_name + ".json")
+            if not isfile(model_filename):
+                model_not_cached = 'Model "%s" not in cache. Attempting download from %s' % \
+                    (model_name, urls.escher_home)
+                warn(model_not_cached)
+                try:
+                    url = urls.model_download + model_name + ".json"
+                    download = urlopen(url)
+                    with open(model_filename, "w") as outfile:
+                        outfile.write(download.read())
+                except HTTPError:
+                    raise ValueError("No model named %s found in cache or at %s" % \
+                                     (model_name, url))
+            with open(model_filename) as f:
+                self.loaded_model_json = f.read()
+    
+    def load_map(self):
+        """Load the map from input map_json using load_resource, or, secondarily,
+           from map_name.
+
+        """
+        map_json = self.map_json
+        if map_json is not None:
+            self.loaded_map_json = load_resource(self.map_json,
+                                                 'map_json',
+                                                 safe=self.safe)
+        elif self.map_name is not None:
+            # get the name
+            map_name = self.map_name  
+            map_name = map_name.replace(".json", "")
+            # if the file is not present attempt to download
+            cache_dir = get_cache_dir(name='maps')
+            map_filename = join(cache_dir, map_name + ".json")
+            if not isfile(map_filename):
+                map_not_cached = 'Map "%s" not in cache. Attempting download from %s' % \
+                    (map_name, urls.escher_home)
+                warn(map_not_cached)
+                try:
+                    url = urls.map_download + map_name + ".json"
+                    download = urlopen(url)
+                    with open(map_filename, "w") as outfile:
+                        outfile.write(download.read())
+                except HTTPError:
+                    raise ValueError("No map named %s found in cache or at %s" % \
+                                     (map_name, url))
+            with open(map_filename) as f:
+                self.loaded_map_json = f.read()
+
+    def _embedded_css(self, is_local):
+        """Return a css string to be embedded in the SVG.
+
+        Returns self.embedded_css if it has been assigned. Otherwise, attempts
+        to download the css file.
+
+        """
+        if self.embedded_css is not None:
+            return self.embedded_css
+        loc = (join(self.local_host, urls.builder_embed_css_local) if is_local else
+               urls.builder_embed_css)
+        download = urlopen(loc)
+        return unicode(download.read().replace('\n', ' '))
+    
+    def _initialize_javascript(self, is_local):
+        javascript = (u"var map_data_{the_id} = {map_data};"
+                      u"var cobra_model_{the_id} = {cobra_model};"
+                      u"var reaction_data_{the_id} = {reaction_data};"
+                      u"var metabolite_data_{the_id} = {metabolite_data};"
+                      u"var css_string_{the_id} = '{style}';").format(
+                          the_id=self.the_id,
+                          map_data=(self.loaded_map_json if self.loaded_map_json else
+                                    u'null'),
+                          cobra_model=(self.loaded_model_json if self.loaded_model_json else
+                                       u'null'),
+                          reaction_data=(json.dumps(self.reaction_data) if self.reaction_data else
+                                         u'null'),
+                          metabolite_data=(json.dumps(self.metabolite_data) if self.metabolite_data else
+                                           u'null'),
+                          style=self._embedded_css(is_local))
+        return javascript
+
+    def _draw_js(self, the_id, dev):
+        draw = (u"GPR({{ selection: d3.select('#{the_id}'),"
+                u"enable_editing: {enable_editing},"
+                u"menu: {menu},"
+                u"enable_keys: {enable_keys},"
+                u"scroll_behavior: {scroll_behavior},"
+                u"fill_screen: {fill_screen},"
+                u"map: map_data_{the_id},"
+                u"cobra_model: cobra_model_{the_id},"
+                u"auto_set_data_domain: {auto_set_data_domain},"
+                u"reaction_data: reaction_data_{the_id},"
+		u"metabolite_data: metabolite_data_{the_id},"
+                u"css: css_string_{the_id},").format(
+                    the_id=the_id,
+                    enable_editing=json.dumps(enable_editing),
+                    menu=json.dumps(menu),
+                    enable_keys=json.dumps(enable_keys),
+                    scroll_behavior=json.dumps(scroll_behavior),
+                    fill_screen=json.dumps(fill_screen),
+                    auto_set_data_domain=json.dumps(auto_set_data_domain))
+        # Add the specified options
+        for option in self.options:
+            val = getattr(self, option)
+            if val is None: continue
+            draw = draw + u"{option}: {value},".format(
+                option=option,
+                value=json.dumps(val))
+        draw = draw + u"});"
+        if not dev:
+            draw = u'escher.%s' % draw
+        return draw
+    
+    def _get_html(self, js_source='web', html_wrapper=False, minified_js=True,
+                  height=500):
+        """Generate the Escher HTML.
+
+        Arguments
+        --------
+
+        js_source: Can be one of the following:
+            'web' - (Default) use js files from zakandrewking.github.io/escher.
+            'local' - use compiled js files in the local escher installation. Works offline.
+            'dev' - use the local, uncompiled development files. Works offline.
+
+            'dev' and 'local' require Builder.embedded_css to be defined.
+
+        minified_js: If True, use the minified version of js files. If
+        js_source is 'dev', then this option is ignored.
+            
+        html_wrapper: If True, return a standalone html file.
+
+        height: Height of the HTML container.
+
+        """
+
+        check_js_source(js_source, self.embedded_css)
+        
+        content = env.get_template('content.html')
+
+        height = parse_height(height)
+            
+        # set the proper urls 
+        is_local = js_source=='local' or js_source=='dev'
+        is_dev = js_source=='dev'
+        d3_url = (join(self.local_host, urls.d3_local) if is_local else
+                  urls.d3)
+        escher_url = ("" if js_source=='dev' else
+                      (join(self.local_host, urls.escher_min_local) if is_local and minified_js else
+                       (join(self.local_host, urls.escher_local) if is_local else
+                        (urls.escher_min if minified_js else
+                         urls.escher))))
+        require_js_url = (join(self.local_host, urls.require_js_local) if is_local else
+                          urls.require_js)
+        html = content.render(require_js=require_js_url,
+                              id=self.the_id,
+                              height=height,
+                              escher_css=(join(self.local_host, urls.builder_css_local) if is_local else
+                                          urls.builder_css),
+                              dev=is_dev,
+                              d3=d3_url,
+                              escher=escher_url,
+                              wrapper=html_wrapper,
+                              host=self.local_host,
+                              initialize_js=self._initialize_javascript(is_local),
+                              draw_js=self._draw_js(self.the_id, menu, is_dev))
+        return html
+
+    def display_in_notebook(self, js_source='web', minified_js=True, height=500):
+        """Display the plot in the notebook.
+
+        Arguments
+        --------
+
+        js_source: Can be one of the following:
+            'web' (Default) - use js files from zakandrewking.github.io/escher.
+            'local' - use compiled js files in the local escher installation.
+                      Works offline.
+            'dev' - use the local, uncompiled development files. Works offline.
+
+        minified_js: If True, use the minified version of js files. If js_source
+        is 'dev', then this option is ignored.
+
+        height: Height of the HTML container.
+
+        """
+        html = self._get_html(js_source=js_source, minified_js=minified_js,
+                              height=height)
+        
+        # import here, in case users don't have requirements installed
+        from IPython.display import HTML
+        return HTML(html)
+
+    
+    def display_in_browser(self, ip='127.0.0.1', port=7655, n_retries=50,
+                           js_source='web', minified_js=True):
+        """Launch a web browser to view the map.
+
+        Arguments
+        --------
+
+        js_source: Can be one of the following:
+            'web' - use js files from zakandrewking.github.io/escher.
+            'local' - use compiled js files in the local escher installation.
+                      Works offline.
+            'dev' - use the local, uncompiled development files. Works offline.
+
+        minified_js: If True, use the minified version of js files. If js_source
+        is 'dev', then this option is ignored.
+
+        """
+        html = self._get_html(js_source=js_source, html_wrapper=True,
+                              minified_js=minified_js)
+        serve_and_open(html, ip=ip, port=port, n_retries=n_retries)
+        
+    def save_html(self, filepath=None, js_source='web', minified_js=True):
+        """Save an HTML file containing the map.
+
+        Arguments
+        --------
+
+        js_source: Can be one of the following:
+            'web' - use js files from zakandrewking.github.io/escher.
+            'local' - use compiled js files in the local escher installation. Works offline.
+            'dev' - use the local, uncompiled development files. Works offline.
+
+        minified_js: If True, use the minified version of js files. If js_source
+        is 'dev', then this option is ignored.
+
+        """
+        html = self._get_html(js_source=js_source, minified_js=minified_js)
+        save_html_to_file(html, filepath)
+   

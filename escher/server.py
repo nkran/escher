@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from escher.plots import Builder
+from escher.plots import Builder, GPR
 from escher import urls
 
 import os, subprocess
@@ -64,7 +64,7 @@ class IndexHandler(BaseHandler):
         data = template.render()
         self.set_header("Content-Type", "text/html")
         self.serve(data)
-  
+        
 class BuilderHandler(BaseHandler):
     @asynchronous
     @gen.engine
@@ -130,6 +130,23 @@ class BuilderHandler(BaseHandler):
         self.set_header("Content-Type", "text/html")
         self.serve(html)
         
+class GPRHandler(BaseHandler):
+    @asynchronous
+    @gen.engine
+    def get(self, dev_path, offline_path, kind, path):
+        js_source = ('dev' if (dev_path is not None) else
+                     ('local' if (offline_path is not None) else
+                      'web'))
+            
+        # make the plot
+        gpr = GPR(safe=True)
+
+        # get the html
+        html = GPR._get_html(js_source=js_source)
+        
+        self.set_header("Content-Type", "text/html")
+        self.serve(html)
+        
 class LibHandler(BaseHandler):
     def get(self, path):
         full_path = join(directory, 'lib', path)
@@ -154,6 +171,7 @@ application = Application([
     (r".*/(css/.*)", StaticHandler),
     (r".*/(resources/.*)", StaticHandler),
     (r"/(dev/)?(local/)?(?:web/)?(builder|viewer)(.*)", BuilderHandler),
+    (r"/(dev/)?(local/)?(?:web/)?(gpr)(.*)", BuilderHandler),
     (r".*/(map_spec.json)", StaticHandler),
     (r"/", IndexHandler),
 ], **settings)
