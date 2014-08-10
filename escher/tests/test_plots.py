@@ -94,4 +94,4 @@ def test_Builder(tmpdir):
     assert len(b.the_id) == 10
 
 def test_GPR():
-    gpr = GPR('gapA')
+    gpr = GPR({'GAPD': 'gapA'})

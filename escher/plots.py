@@ -578,22 +578,23 @@ class Builder(object):
         save_html_to_file(html, filepath)
     
 class GPR(object):
-    """GPR visualization
+    """GPR visualization.
     
     Arguments
     ---------
 
-    gene_reaction_rule:
+    gene_reaction_rule: A dictionary with reaction ids for keys and
+    gene_reaction_rules for values.
     
     safe: if True, then loading files from the filesytem is not allowed. This is
     to ensure the safety of using Builder with a web server.
 
     """
-    def __init__(self, gene_reaction_rule, safe=False):
+    def __init__(self, gene_reaction_rules, safe=False):
         self.safe = safe
 
         # params
-        self.gene_reaction_rule = gene_reaction_rule
+        self.gene_reaction_rules = gene_reaction_rules
 
         # make the unique id
         self.generate_id()
@@ -634,10 +635,10 @@ class GPR(object):
 
     def _draw_js(self, the_id, dev):
         draw = (u"GPR({{ selection: d3.select('#{the_id}'),"
-                u"gene_reaction_rule: {gene_reaction_rule},"
+                u"gene_reaction_rules: {gene_reaction_rules},"
                 u"css: css_string_{the_id},").format(
                     the_id=the_id,
-                    gene_reaction_rule=self.gene_reaction_rule)
+                    gene_reaction_rules=self.gene_reaction_rules)
         # Add the specified options
         for option in self.options:
             val = getattr(self, option)
