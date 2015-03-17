@@ -356,6 +356,8 @@ define(["utils", "CallbackManager", "ScaleEditor"], function(utils, CallbackMana
             ['scroll_behavior', 'Scroll to zoom (instead of scroll to pan)',
              ('If checked, then the scroll wheel and trackpad will control zoom ' +
               'rather than pan.'), {'zoom': true, 'pan': false}],
+            ['snap_to_grid', 'Snap to grid when dragging',
+             ('Snap draggable elements to a grid')],
             ['hide_secondary_metabolites', 'Hide secondary metabolites',
              ('If checked, then only the primary metabolites ' +
               'will be displayed.')],
@@ -387,7 +389,6 @@ define(["utils", "CallbackManager", "ScaleEditor"], function(utils, CallbackMana
         opts.select('input')
             .on('change', function(d) {
                 if (d.length >= 4) { // not a boolean setting
-                    console.log(d);
                     for (var key in d[3]) {
                         if (d[3][key] == this.checked) {
                             settings.set_conditional(d[0], key);

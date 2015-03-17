@@ -65,12 +65,15 @@ define(["utils", "build"], function(utils, build) {
     return Behavior;
 
     // definitions
-    function init(map, undo_stack) {
+    function init(map, undo_stack, snap_to_grid) {
         this.map = map;
         this.undo_stack = undo_stack;
 
         // make an empty function that can be called as a behavior and does nothing
         this.empty_behavior = function() {};
+        
+        // change this variable to change the mode
+        this.snap_to_grid = snap_to_grid;
 
         // rotation mode operates separately from the rest
         this.rotation_mode_enabled = false;
@@ -188,7 +191,6 @@ define(["utils", "build"], function(utils, build) {
                                                                 this.map.sel);
             selection_background.call(this.rotation_drag);
             this.selectable_drag = this.rotation_drag;
-            console.log(this.selectable_drag);
         } else {
             // turn off all listeners
             hide_center.call(this);
@@ -459,6 +461,9 @@ define(["utils", "build"], function(utils, build) {
             reaction_ids = null,
             // for text labels
             text_label_ids_to_drag = null,
+            get_snap_to_grid = function() {
+                return this.snap_to_grid;
+            }.bind(this),
             move_label = function(text_label_id, displacement) {
                 var text_label = map.text_labels[text_label_id];
                 text_label.x = text_label.x + displacement.x;
@@ -501,6 +506,15 @@ define(["utils", "build"], function(utils, build) {
             }
         });
         behavior.on("drag", function(d) {
+            // latest value
+            var lim = 10.0,
+                snap = function(v) { return Math.round(v / lim) * lim },
+                snap_disp = (get_snap_to_grid() ?
+                             function(disp) {
+                                 return {x: snap(disp.x), y: snap(disp.y)};
+                             } :
+                             function(disp) { return disp; });
+            
             // if this node is not already selected, then select this one and
             // deselect all other nodes. Otherwise, leave the selection alone.
             if (!d3.select(this.parentNode).classed('selected'))
@@ -543,16 +557,14 @@ define(["utils", "build"], function(utils, build) {
                                                              map.reactions,
                                                              map.beziers,
                                                              displacement);
+                // TODO figure out how to move multiple nodes to match a single
+                // grid. You can't snap_to_grid the _displacement_; you have to
+                // snap the final _location_. Also apply to control points. And
+                // deal with undo/redo properly. And clean up the settings menu.
                 reaction_ids = utils.unique_concat([reaction_ids, updated.reaction_ids]);
-                // remember the displacements
-                // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 };
-                // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement);
             });
             text_label_ids_to_drag.forEach(function(text_label_id) {
-                move_label(text_label_id, displacement);                
-                // remember the displacements
-                // if (!(node_id in total_displacement))  total_displacement[node_id] = { x: 0, y: 0 };
-                // total_displacement[node_id] = utils.c_plus_c(total_displacement[node_id], displacement);
+                move_label(text_label_id, displacement);
             });
             // draw
             map.draw_these_nodes(node_ids_to_drag);
@@ -575,7 +587,7 @@ define(["utils", "build"], function(utils, build) {
             map.sel.selectAll('.node-to-combine').each(function(d) {
                 node_to_combine_array.push(d.node_id);
             });
-            if (node_to_combine_array.length==1) {
+            if (node_to_combine_array.length == 1) {
                 // If a node is ready for it, combine nodes
                 var fixed_node_id = node_to_combine_array[0],
                     dragged_node_id = this.parentNode.__data__.node_id,

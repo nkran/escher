@@ -199,7 +199,8 @@ define(['utils', 'Draw', 'Behavior', 'Scale', 'build', 'UndoStack', 'CallbackMan
         this.undo_stack = new UndoStack();
 
         // make a behavior object
-        this.behavior = new Behavior(this, this.undo_stack);
+        this.behavior = new Behavior(this, this.undo_stack,
+                                     this.settings.get_option('snap_to_grid'));
 
         // draw manager
         this.draw = new Draw(this.behavior, this.settings);
@@ -634,7 +635,6 @@ define(['utils', 'Draw', 'Behavior', 'Scale', 'build', 'UndoStack', 'CallbackMan
                                          this.reactions);
         }.bind(this),
             update_fn = function(sel) {
-                console.log(this.behavior.selectable_drag);
                 return this.draw.update_node(sel,
                                              this.scale,
                                              this.has_data_on_nodes,

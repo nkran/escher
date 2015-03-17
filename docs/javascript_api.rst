@@ -34,6 +34,10 @@ JavaScript API
 	  (Default: 'pan') This option determines the effect that the scroll
 	  wheel will have on an Escher map. Can be 'pan' to pan the map or
 	  'zoom' to zoom the map when the user moves the scroll wheel.
+          
+       .. js:attribute:: options.snap_to_grid
+                         
+          (Default: false) Snap elements to a grid when dragging.
 
        .. js:attribute:: options.enable_editing
 

@@ -50,6 +50,7 @@ define(['utils', 'BuildInput', 'ZoomContainer', 'Map', 'CobraModel', 'Brush', 'C
             // view options
             menu: 'all',
             scroll_behavior: 'pan',
+            snap_to_grid: false,
             enable_editing: true,
             enable_keys: true,
             enable_search: true,
@@ -118,8 +119,8 @@ define(['utils', 'BuildInput', 'ZoomContainer', 'Map', 'CobraModel', 'Brush', 'C
             }.bind(this),
             // the options that are erased when the settings menu is canceled
             conditional_options = ['hide_secondary_metabolites', 'show_gene_reaction_rules',
-                                   'hide_all_labels', 'scroll_behavior', 'reaction_styles', 
-                                   'reaction_compare_style', 'reaction_scale',
+                                   'hide_all_labels', 'scroll_behavior', 'snap_to_grid',
+                                   'reaction_styles', 'reaction_compare_style', 'reaction_scale',
                                    'reaction_no_data_color', 'reaction_no_data_size',
                                    'and_method_in_gene_reaction_rule', 'metabolite_styles',
                                    'metabolite_compare_style', 'metabolite_scale',
@@ -166,6 +167,8 @@ define(['utils', 'BuildInput', 'ZoomContainer', 'Map', 'CobraModel', 'Brush', 'C
                         this.zoom_container.update_scroll_behavior(new_behavior);
                     }
                     if (this.map !== null) {
+                        console.log('here');
+                        this.map.behavior.snap_to_grid = this.settings.get_option('snap_to_grid');
                         this.map.draw_all_nodes(false);
                         this.map.draw_all_reactions(true, false);
                     }
