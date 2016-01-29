@@ -29,6 +29,7 @@ Builder.prototype = {
     _set_mode: _set_mode,
     view_mode: view_mode,
     build_mode: build_mode,
+    membrane_mode: membrane_mode,
     brush_mode: brush_mode,
     zoom_mode: zoom_mode,
     rotate_mode: rotate_mode,
@@ -404,82 +405,77 @@ function load_map(map_data, should_update_data) {
 function _set_mode(mode) {
     this.search_bar.toggle(false);
     // input
-    this.build_input.toggle(mode=='build');
-    this.build_input.direction_arrow.toggle(mode=='build');
-    if (this.options.menu=='all' && this.options.enable_editing)
-        this._toggle_direction_buttons(mode=='build');
+    this.build_input.toggle(mode === 'build');
+    this.build_input.direction_arrow.toggle(mode === 'build');
+    if (this.options.menu === 'all' && this.options.enable_editing)
+        this._toggle_direction_buttons(mode === 'build');
     // brush
-    this.brush.toggle(mode=='brush');
+    this.brush.toggle(mode === 'brush');
     // zoom
-    this.zoom_container.toggle_pan_drag(mode=='zoom' || mode=='view');
+    this.zoom_container.toggle_pan_drag(mode === 'zoom' || mode === 'view');
     // resize canvas
-    this.map.canvas.toggle_resize(mode=='zoom' || mode=='brush');
+    this.map.canvas.toggle_resize(mode === 'zoom' || mode === 'brush');
     // Behavior. Be careful of the order becuase rotation and
     // toggle_selectable_drag both use Behavior.selectable_drag.
-    if (mode == 'rotate') {
+    if (mode === 'rotate') {
         this.map.behavior.toggle_selectable_drag(false); // before toggle_rotation_mode
         this.map.behavior.toggle_rotation_mode(true);
     } else {
-        this.map.behavior.toggle_rotation_mode(mode=='rotate'); // before toggle_selectable_drag
-        this.map.behavior.toggle_selectable_drag(mode=='brush');
+        this.map.behavior.toggle_rotation_mode(mode === 'rotate'); // before toggle_selectable_drag
+        this.map.behavior.toggle_selectable_drag(mode === 'brush');
     }
-    this.map.behavior.toggle_selectable_click(mode=='build' || mode=='brush');
-    this.map.behavior.toggle_label_drag(mode=='brush');
-    this.map.behavior.toggle_label_mousedown(mode=='brush');
-    this.map.behavior.toggle_text_label_edit(mode=='text');
-    this.map.behavior.toggle_bezier_drag(mode=='brush');
+    this.map.behavior.toggle_selectable_click(mode === 'build' || mode === 'brush');
+    this.map.behavior.toggle_label_drag(mode === 'brush');
+    this.map.behavior.toggle_label_mousedown(mode === 'brush');
+    this.map.behavior.toggle_text_label_edit(mode === 'text');
+    this.map.behavior.toggle_membrane_edit(mode === 'membrane');
+    this.map.behavior.toggle_bezier_drag(mode === 'brush');
     // edit selections
-    if (mode=='view' || mode=='text')
+    if (mode === 'view' || mode === 'text' || mode === 'membrane')
         this.map.select_none();
-    if (mode=='rotate')
+    if (mode === 'rotate')
         this.map.deselect_text_labels();
     this.map.draw_everything();
 }
 
 function view_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
-
-     */
+    /** For documentation of this function, see docs/javascript_api.rst. */
     this.callback_manager.run('view_mode');
     this._set_mode('view');
 }
 
-function build_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
-
-     */
-    this.callback_manager.run('build_mode');
-    this._set_mode('build');
-}
-
-function brush_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
-
-     */
-    this.callback_manager.run('brush_mode');
-    this._set_mode('brush');
-}
-
 function zoom_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
-
-     */
+    /** For documentation of this function, see docs/javascript_api.rst. */
     this.callback_manager.run('zoom_mode');
     this._set_mode('zoom');
 }
 
-function rotate_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
+function brush_mode() {
+    /** For documentation of this function, see docs/javascript_api.rst. */
+    this.callback_manager.run('brush_mode');
+    this._set_mode('brush');
+}
 
-     */
+function build_mode() {
+    /** For documentation of this function, see docs/javascript_api.rst. */
+    this.callback_manager.run('build_mode');
+    this._set_mode('build');
+}
+
+function membrane_mode() {
+    /** For documentation of this function, see docs/javascript_api.rst. */
+    this.callback_manager.run('membrane_mode');
+    this._set_mode('membrane');
+}
+
+function rotate_mode() {
+    /** For documentation of this function, see docs/javascript_api.rst. */
     this.callback_manager.run('rotate_mode');
     this._set_mode('rotate');
 }
 
 function text_mode() {
-    /** For documentation of this function, see docs/javascript_api.rst.
-
-     */
+    /** For documentation of this function, see docs/javascript_api.rst. */
     this.callback_manager.run('text_mode');
     this._set_mode('text');
 }
@@ -778,6 +774,10 @@ function _setup_menu(menu_selection, button_selection, map, zoom_container,
                       id: 'build-mode-menu-button',
                       text: 'Add reaction mode',
                       key_text: (enable_keys ? ' (N)' : null) })
+            .button({ key: keys.membrane_mode,
+                      id: 'membrane-mode-menu-button',
+                      text: 'Membrane mode',
+                      key_text: (enable_keys ? ' (M)': null) })
             .button({ key: keys.rotate_mode,
                       id: 'rotate-mode-menu-button',
                       text: 'Rotate mode',
@@ -900,6 +900,11 @@ function _setup_menu(menu_selection, button_selection, map, zoom_container,
                       icon: 'glyphicon glyphicon-plus',
                       tooltip: 'Add reaction mode',
                       key_text: (enable_keys ? ' (N)' : null) })
+            .button({ key: keys.membrane_mode,
+                      id: 'membrane-mode-button',
+                      icon: 'glyphicon glyphicon-edit',
+                      tooltip: 'Membrane mode',
+                      key_text: (enable_keys ? ' (M)' : null) })
             .button({ key: keys.rotate_mode,
                       id: 'rotate-mode-button',
                       icon: 'glyphicon glyphicon-repeat',
@@ -935,9 +940,9 @@ function _setup_menu(menu_selection, button_selection, map, zoom_container,
             .button('toggle');
 
         // menu buttons
-        var ids = ['zoom-mode-menu-button', 'brush-mode-menu-button',
-                   'build-mode-menu-button', 'rotate-mode-menu-button',
-                   'view-mode-menu-button', 'text-mode-menu-button'];
+        var ids = ['view-mode-menu-button', 'zoom-mode-menu-button', 'brush-mode-menu-button',
+                   'build-mode-menu-button', 'membrane-mode-menu-button', 'rotate-mode-menu-button',
+                   'text-mode-menu-button'];
         ids.forEach(function(this_id) {
             var b_id = this_id.replace('-menu', '');
             this.selection.select('#' + this_id)
@@ -946,11 +951,12 @@ function _setup_menu(menu_selection, button_selection, map, zoom_container,
                 .classed('glyphicon-ok', b_id == id);
         }.bind(this));
     };
+    this.callback_manager.set('view_mode', select_button.bind(this, 'view-mode-button'));
     this.callback_manager.set('zoom_mode', select_button.bind(this, 'zoom-mode-button'));
     this.callback_manager.set('brush_mode', select_button.bind(this, 'brush-mode-button'));
     this.callback_manager.set('build_mode', select_button.bind(this, 'build-mode-button'));
+    this.callback_manager.set('membrane_mode', select_button.bind(this, 'membrane-mode-button'));
     this.callback_manager.set('rotate_mode', select_button.bind(this, 'rotate-mode-button'));
-    this.callback_manager.set('view_mode', select_button.bind(this, 'view-mode-button'));
     this.callback_manager.set('text_mode', select_button.bind(this, 'text-mode-button'));
 
     // definitions
@@ -1218,12 +1224,6 @@ function _get_keys(map, zoom_container, search_bar, settings_bar, enable_editing
     };
     if (enable_editing) {
         utils.extend(keys, {
-            build_mode: {
-                key: 'n',
-                target: this,
-                fn: this.build_mode,
-                ignore_with_input: true
-            },
             zoom_mode: {
                 key: 'z',
                 target: this,
@@ -1234,6 +1234,18 @@ function _get_keys(map, zoom_container, search_bar, settings_bar, enable_editing
                 key: 'v',
                 target: this,
                 fn: this.brush_mode,
+                ignore_with_input: true
+            },
+            build_mode: {
+                key: 'n',
+                target: this,
+                fn: this.build_mode,
+                ignore_with_input: true
+            },
+            membrane_mode: {
+                key: 'm',
+                target: this,
+                fn: this.membrane_mode,
                 ignore_with_input: true
             },
             rotate_mode: {

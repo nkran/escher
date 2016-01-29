@@ -53,6 +53,7 @@
   },
   "scripts": {
     "test": "node debug ./node_modules/.bin/grunt test",
-    "compile": "./node_modules/grunt-cli/bin/grunt"
+    "compile": "./node_modules/grunt-cli/bin/grunt",
+    "compilew": "./node_modules/grunt-cli/bin/grunt watch"
   }
 }

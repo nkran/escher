@@ -16,8 +16,10 @@
 
 /* global d3 */
 
-var utils = require('./utils');
-var build = require('./build');
+var utils = require('./utils')
+var build = require('./build')
+
+var _ = require('underscore')
 
 
 var Behavior = utils.make_class();
@@ -30,6 +32,7 @@ Behavior.prototype = {
     // toggle
     toggle_selectable_click: toggle_selectable_click,
     toggle_text_label_edit: toggle_text_label_edit,
+    toggle_membrane_edit: toggle_membrane_edit,
     toggle_selectable_drag: toggle_selectable_drag,
     toggle_label_drag: toggle_label_drag,
     toggle_label_mousedown: toggle_label_mousedown,
@@ -63,6 +66,8 @@ function init(map, undo_stack) {
     this.selectable_mousedown = null;
     this.text_label_mousedown = null;
     this.text_label_click = null;
+    this.membrane_mousedown = null;
+    this.membrane_click = null;
     this.selectable_drag = this.empty_behavior;
     this.node_mouseover = null;
     this.node_mouseout = null;
@@ -318,6 +323,48 @@ function toggle_text_label_edit(on_off) {
         // remove the new-label listener
         this.map.sel.on('mousedown.new_text_label', null);
         this.map.callback_manager.run('hide_text_label_editor');
+    }
+}
+
+function toggle_membrane_edit(on_off) {
+    /** With no argument, toggle the membrane edit.
+
+     Pass in a boolean argument to set the on/off state.
+
+     */
+    if (_.isUndefined(on_off)) on_off = this.text_edit_mousedown === null
+    if (on_off) {
+        var map = this.map,
+            selection = this.selection
+        this.membrane_mousedown = function() {
+            if (d3.event.defaultPrevented) return // mousedown suppressed
+            // run the callback
+            var coords_a = utils.d3_transform_catch(d3.select(this).attr('transform')).translate,
+                coords = {x: coords_a[0], y: coords_a[1]}
+            map.callback_manager.run('edit_membrane', null, d3.select(this), coords)
+            d3.event.stopPropagation()
+        }
+        this.membrane_click = null
+        this.map.sel.select('#membranes')
+            .selectAll('.membrane-label')
+            .classed('edit-text-cursor', true)
+        // add the new-label listener
+        this.map.sel.on('mousedown.new_membrane', function(node) {
+            // silence other listeners
+            d3.event.preventDefault()
+            var coords = { x: d3.mouse(node)[0],
+                           y: d3.mouse(node)[1] }
+            this.map.callback_manager.run('new_membrane', null, coords)
+        }.bind(this, this.map.sel.node()))
+    } else {
+        this.membrane_mousedown = this.selectable_mousedown
+        this.membrane_click = this.selectable_click
+        this.map.sel.select('#membranes')
+            .selectAll('.membrane-label')
+            .classed('edit-text-cursor', false)
+        // remove the new-label listener
+        this.map.sel.on('mousedown.new_membrane', null)
+        this.map.callback_manager.run('hide_membrane_editor')
     }
 }
 

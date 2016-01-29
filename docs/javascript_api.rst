@@ -275,9 +275,10 @@ JavaScript API
        .. code:: javascript
 
        this.callback_manager.run('view_mode');
-       this.callback_manager.run('build_mode');
-       this.callback_manager.run('brush_mode');
        this.callback_manager.run('zoom_mode');
+       this.callback_manager.run('brush_mode');
+       this.callback_manager.run('build_mode');
+       this.callback_manager.run('membrane_mode');
        this.callback_manager.run('rotate_mode');
        this.callback_manager.run('text_mode');
        this.callback_manager.run('load_model', null, model_data, should_update_data);
@@ -304,27 +305,33 @@ JavaScript API
 
     .. js:function:: view_mode()
 
-       Enter view mode.
-                      
-    .. js:function:: build_mode()
-
-       Enter build mode.
-                      
-    .. js:function:: brush_mode()
-
-       Enter brush mode.
+       Enter view mode for panning and zooming on the map. Canvas resizing is
+       not allowed in view mode.
                       
     .. js:function:: zoom_mode()
 
-       Enter zoom mode.
+       Enter zoom mode for panning and zooming on the map. Canvas resizing is
+       allowed in zoom mode.
+                      
+    .. js:function:: brush_mode()
+
+       Enter brush mode for selecting objects with a brush.
+                      
+    .. js:function:: build_mode()
+
+       Enter build mode, which is called Add Reaction Mode in the user interface.
+                      
+    .. js:function:: membrane_mode()
+
+       Enter membrane mode for drawing and editing membranes.
                       
     .. js:function:: rotate_mode()
 
-       Enter rotate mode.
+       Enter rotate mode for rotating selected objects.
                       
     .. js:function:: text_mode()
 
-       Enter text mode.
+       Enter text mode for drawing and editing text annotations.
                       
     .. js:function:: set_reaction_data(data)
 
