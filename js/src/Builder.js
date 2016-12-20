@@ -444,6 +444,8 @@ function _set_mode(mode) {
     this.map.behavior.toggle_label_mousedown(mode=='brush');
     this.map.behavior.toggle_text_label_edit(mode=='text');
     this.map.behavior.toggle_bezier_drag(mode=='brush');
+    this.map.behavior.toggle_reaction_hover(mode=='zoom' || mode=='view');
+
     // edit selections
     if (mode=='view' || mode=='text')
         this.map.select_none();

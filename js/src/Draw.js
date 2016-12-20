@@ -116,6 +116,10 @@ function update_reaction(update_selection, scale, cobra_model, drawn_nodes,
 
      */
 
+    var reaction_mousedown_fn = this.behavior.reaction_mousedown
+    var reaction_mouseover_fn = this.behavior.reaction_mouseover
+    var reaction_mouseout_fn = this.behavior.reaction_mouseout
+
     // update reaction label
     update_selection.select('.reaction-label-group')
         .call(function(sel) {
@@ -133,6 +137,9 @@ function update_reaction(update_selection, scale, cobra_model, drawn_nodes,
                                function(sel) {
                                    sel.remove();
                                });
+
+    update_selection.on('mouseover', reaction_mouseover_fn);
+    update_selection.on('mouseout', reaction_mouseout_fn);
 
     // run the callback
     this.callback_manager.run('update_reaction', this, update_selection);
