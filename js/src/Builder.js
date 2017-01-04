@@ -358,7 +358,7 @@ function load_map(map_data, should_update_data) {
     // set up menu and status bars
     if (this.options.menu === 'all') {
         if (this.options.ignore_bootstrap)
-            console.error('Cannot create the dropdown menus if ignore_bootstrap = true')
+            console.info('Cannot create the dropdown menus if ignore_bootstrap = true')
         else
             this._set_up_menu(menu_div, this.map, this.map.key_manager, keys,
                               this.options.enable_editing, this.options.enable_keys,
@@ -444,7 +444,7 @@ function _set_mode(mode) {
     this.map.behavior.toggle_label_mousedown(mode=='brush');
     this.map.behavior.toggle_text_label_edit(mode=='text');
     this.map.behavior.toggle_bezier_drag(mode=='brush');
-    this.map.behavior.toggle_reaction_hover(mode=='zoom' || mode=='view');
+    this.map.behavior.toggle_reaction_hover(true);
 
     // edit selections
     if (mode=='view' || mode=='text')
@@ -1022,6 +1022,7 @@ function _set_up_button_panel(button_selection, keys, enable_editing,
     ui.individual_button(button_panel.append('li'),
                          { key: keys.zoom_in,
                            text: '+',
+                           id: 'zoom-in-button',
                            icon: 'glyphicon glyphicon-plus-sign',
                            tooltip: 'Zoom in',
                            key_text: (enable_keys ? ' (Ctrl and +)' : null),
@@ -1029,13 +1030,15 @@ function _set_up_button_panel(button_selection, keys, enable_editing,
     ui.individual_button(button_panel.append('li'),
                          { key: keys.zoom_out,
                            text: '–',
+                           id: 'zoom-out-button',
                            icon: 'glyphicon glyphicon-minus-sign',
-                           tooltip: 'Zoom out',
+                           tooltip: 'Zoom out-button',
                            key_text: (enable_keys ? ' (Ctrl and -)' : null),
                            ignore_bootstrap: ignore_bootstrap  })
     ui.individual_button(button_panel.append('li'),
                          { key: keys.extent_canvas,
                            text: '↔',
+                           id: 'extend-button',
                            icon: 'glyphicon glyphicon-resize-full',
                            tooltip: 'Zoom to canvas',
                            key_text: (enable_keys ? ' (Ctrl+1)' : null),
@@ -1097,21 +1100,25 @@ function _set_up_button_panel(button_selection, keys, enable_editing,
                           text: '←',
                           icon: 'glyphicon glyphicon-arrow-left',
                           tooltip: 'Direction arrow (←)',
+                          id: 'arrow-left-button',
                           ignore_bootstrap: ignore_bootstrap  })
                 .button({ key: keys.direction_arrow_right,
                           text: '→',
                           icon: 'glyphicon glyphicon-arrow-right',
                           tooltip: 'Direction arrow (→)',
+                          id: 'arrow-right-button',
                           ignore_bootstrap: ignore_bootstrap  })
                 .button({ key: keys.direction_arrow_up,
                           text: '↑',
                           icon: 'glyphicon glyphicon-arrow-up',
                           tooltip: 'Direction arrow (↑)',
+                          id: 'arrow-up-button',
                           ignore_bootstrap: ignore_bootstrap  })
                 .button({ key: keys.direction_arrow_down,
                           text: '↓',
                           icon: 'glyphicon glyphicon-arrow-down',
                           tooltip: 'Direction arrow (↓)',
+                          id: 'arrow-down-button',
                           ignore_bootstrap: ignore_bootstrap  })
     }
 }
