@@ -60,7 +60,8 @@ module.exports = {
     get_document: get_document,
     get_window: get_window,
     d3_transform_catch: d3_transform_catch,
-    check_browser: check_browser
+    check_browser: check_browser,
+    calculate_fva_opacity: calculate_fva_opacity
 };
 
 
@@ -1102,4 +1103,11 @@ function check_browser(name) {
     } catch (e) {
         return false;
     }
+}
+
+function calculate_fva_opacity(flux, lower, upper, small_value) {
+    var flux_positive = flux > 0 ? 1 : -1;
+    flux += small_value * flux_positive;
+
+    return Math.abs(flux) / (Math.abs(flux) + Math.abs(upper - lower));
 }

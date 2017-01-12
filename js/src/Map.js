@@ -118,6 +118,7 @@ Map.prototype = {
     draw_all_reactions: draw_all_reactions,
     draw_these_reactions: draw_these_reactions,
     clear_deleted_reactions: clear_deleted_reactions,
+    update_these_reactions_opacity: update_these_reactions_opacity,
     // draw knockouts
     draw_these_knockouts: draw_these_knockouts,
     clear_these_knockouts: clear_these_knockouts,
@@ -657,6 +658,29 @@ function clear_these_knockouts(reaction_ids) {
      // draw the mark
     utils.draw_an_object(this.sel, '#nodes', '.node', node_subset, 'node_id',
                          null, clear_mark);
+}
+
+function update_these_reactions_opacity(reactions_obj) {
+
+    // find reactions for reaction_ids
+    var reaction_subset = utils.object_slice_for_bigg(this.reactions, _.keys(reactions_obj));
+
+    _.each(_.keys(reaction_subset), function(id) {
+        var bigg_id = reaction_subset[id].bigg_id;
+        var fva_data = reactions_obj[bigg_id];
+
+        reaction_subset[id].lower_bound = fva_data.lower_bound;
+        reaction_subset[id].upper_bound = fva_data.upper_bound;
+    });
+
+    // function to update reactions
+    var update_fn = function(sel) {
+        return this.draw.update_reaction_opacity(sel);
+    }.bind(this);
+
+    // draw the reactions
+    utils.draw_an_object(this.sel, '#reactions', '.reaction', reaction_subset,
+                         'reaction_id', null, update_fn);
 }
 
 function draw_all_nodes(clear_deleted) {

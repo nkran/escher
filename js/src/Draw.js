@@ -53,8 +53,8 @@ Draw.prototype = {
     update_reaction_label: update_reaction_label,
     create_segment: create_segment,
     update_segment: update_segment,
-    update_knockout_mark: update_knockout_mark
-
+    update_knockout_mark: update_knockout_mark,
+    update_reaction_opacity: update_reaction_opacity
 };
 module.exports = Draw;
 
@@ -179,6 +179,17 @@ function update_knockout_mark(update_selection) {
         .attr('dy', 30);
 
     this.callback_manager.run('update_knockout_mark', this, update_selection);
+}
+
+function update_reaction_opacity(update_selection) {
+    // console.log('update_selection draw', update_selection, fva_data);
+
+    update_selection.selectAll('.segment')
+        .style('opacity', function(d) {
+            var reaction_data = this.parentNode.parentNode.__data__;
+            var opacity = utils.calculate_fva_opacity(d.data, reaction_data.lower_bound, reaction_data.upper_bound, 0.1);
+            return opacity;
+        });
 }
 
 /**
